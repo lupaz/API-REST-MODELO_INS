@@ -2,7 +2,8 @@ var express = require('express');
 var router = express.Router();
 var { Client } = require('pg');
 var conString = "postgres://postgres:postgres@localhost:5432/ins_alfresco";
-
+var moment = require('moment');
+var constantes = require('../utils/constantes.js');
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -52,6 +53,42 @@ router.get('/solicitudes/:correo', function (req, res) {
     res.send(respuesta);
     console.error(e.stack)
   });
+});
+
+router.post('/solicitudes/crear', function(req,res){
+  var query = "INSERT INTO alfresco_ins.solicitud( id_solicitud, fecha_solicitud, json_datos, estado, correo)"+
+	             "VALUES ($1, $2, $3, $4, $5)";
+
+  //mapeamos la respuesta
+  console.log(req);
+  try {
+    let idSol=req.body.idSolicitud;
+    let fecha_sol= moment();
+    let json_sol = JSON.stringify(req.body);
+    let estado = constantes.ingreso_solicitud;
+    let correo = req.body.correo;
+    //array de valores
+    let valores=[idSol,fecha_sol,json_sol,estado,correo];
+    //console.log('variables--->',idSol,fecha_sol,json_sol, estado);
+    var client = new Client({
+       connectionString: conString,
+    });
+    client.connect();
+    client.query(query,valores)
+     .then(resBd => {
+       client.end();
+       res.send({guardoSolicitud:true});
+     }).catch(e => {
+       client.end();
+       console.error(e.stack);
+        res.send({guardoSolicitud:false});
+    });
+  } catch (e) {
+    console.log(e);
+    res.send({guardoSolicitud:false});
+  }
+  /**/
+
 });
 
 //=================================== CATALOGOS ================================
