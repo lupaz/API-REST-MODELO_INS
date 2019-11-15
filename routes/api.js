@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var { Client } = require('pg');
+var { Pool, Client } = require('pg');
 var conString = "postgres://postgres:postgres@localhost:5432/ins_alfresco";
 var moment = require('moment');
 var constantes = require('../utils/constantes.js');
@@ -33,7 +33,7 @@ router.get('/solicitudes/:correo', function (req, res) {
   var query = "SELECT * FROM alfresco_ins.solicitud WHERE correo = $1";
   console.log('Parametros', req.params);
   var {correo} = req.params
-  var respuesta = { valido:false,estado:0};
+  var respuesta = { valido:"true",estado:0};
   var client = new Client({
     connectionString: conString,
   });
@@ -42,8 +42,8 @@ router.get('/solicitudes/:correo', function (req, res) {
   .then(resBd => {
     client.end();
     if(resBd.rows.length > 0){
-      respuesta.valido=true;
-      respuesta.estado=resBd.rows[0].estado;
+      respuesta.valido="false";
+      respuesta.estado=constantes.getDescEstado(resBd.rows[0].estado);
       res.send(respuesta);
     }else{
         res.send(respuesta);
@@ -60,7 +60,7 @@ router.post('/solicitudes/crear', function(req,res){
 	             "VALUES ($1, $2, $3, $4, $5)";
 
   //mapeamos la respuesta
-  console.log(req);
+  //console.log(req);
   try {
     let idSol=req.body.idSolicitud;
     let fecha_sol= moment();
@@ -89,6 +89,32 @@ router.post('/solicitudes/crear', function(req,res){
   }
   /**/
 
+});
+
+router.post('/solicitudes/actualizar/estado', function(req,res){
+  var query = "UPDATE alfresco_ins.solicitud SET estado = $1 WHERE id_solicitud = $2";
+
+  try {
+    var client = new Client({
+       connectionString: conString,
+    });
+    client.connect();
+    let codEstado = constantes.getCodigoEstado(req.body.estadoSolicitud);
+    let idSolicitud = req.body.idSolicitud;
+    //res.send({idSolicitud:idSolicitud,codigoEstado:codEstado});
+    client.query(query,[codEstado,idSolicitud])
+     .then(resBd => {
+       client.end();
+       res.send({actualizoEstado:true});
+     }).catch(e => {
+       client.end();
+       console.error(e.stack);
+        res.send({actualizoEstado:false});
+    });
+  } catch (e) {
+    console.log(e);
+    res.send({actualizoEstado:false});
+  }
 });
 
 //=================================== CATALOGOS ================================
@@ -148,6 +174,47 @@ router.get('/estudiantes', function (req, res) {
   });
 });
 
+router.post('/estudiantes/crear', function(req,res){
+  var query1 = "INSERT INTO alfresco_ins.estudiante (id, cui, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, num_telefono) "+
+	             "VALUES ($1, $2, $3, $4, $5, $6, $7) ";
+  var query2 = "UPDATE alfresco_ins.solicitud SET estado = $1 WHERE id_solicitud = $2"
+  //mapeamos la respuesta
+  //console.log(req);
+  try {
+    //array de valores
+    let valores=[req.body.numeroId, req.body.numeroCui, req.body.primerNombre,req.body.segundoNombre,req.body.primerApellido, req.body.segundoApellido, req.body.numTelefono];
+    let valores2=[constantes.finalizo_solicitud,req.body.idSolicitud];
+    console.log('variables---> ',valores, ' ---> ',valores2);
 
+    (async () => {
+      var pool = new Pool({
+        connectionString: conString,
+      });
+
+      var client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(query1, valores);
+        await client.query(query2, valores2);
+        await client.query('COMMIT');
+        client.release()
+        res.send({guardoEstudiante:true});
+      } catch (e) {
+        console.log('error roll --> : ',e);
+        await client.query('ROLLBACK')
+        throw e
+        client.release()
+        res.send({guardoEstudiante:false});
+      }
+    })().catch(e => {
+        console.log('error async --> : ',e);
+        res.send({guardoEstudiante:false});
+    });
+
+  } catch (e) {
+    console.log(e);
+    res.send({guardoEstudiante:false});
+  }
+});
 
 module.exports = router;

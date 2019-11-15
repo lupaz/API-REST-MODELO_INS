@@ -9,35 +9,60 @@ block content
         tr: th MicroServicios
         tr: th Ruta
           th Descripción 
+          th Método
           th Formato de respuesta
       tbody
         tr 
           td
             a api/solicitudes
           td Retorna el listado de solicitudes registradas
+          td GET
+          td json
+        tr 
+          td
+            a api/solicitudes/crear
+          td Se crea el registro de una solicitud de inscripción
+          td POST
           td json
         tr 
           td
             a api/solicitudes/{correo}
           td Retorna la validación si un correo ya está en uso en una solicitud
+          td GET
           td json
+        tr 
+          td
+            a api/solicitudes/actualizar/estado
+          td Servicio util para la actualización del estado de una solicitud
+          td POST
+          td json  
         tr 
           td
             a api/catalgos
           td Retorna el listado de catálogos utilizados en el proceso de inscripción
+          td GET
           td json
         tr 
           td
             a api/catalogos/datos/{codigo_catalogo}
           td Retorna el listado de datos pertenecintes al catálogo ingresado en la ruta
+          td GET
+          td json
+        tr 
+          td
+            a api/estudiantes/crear
+          td Servicio que crea el registro de un estudiante
+          td POST
           td json
         tr 
           td
             a api/estudiantes
           td Retorna el listado de estudiantes registrados
+          td GET
           td json
         tr 
           td
             a api/estudiantes/datos/{id}
           td Retorna los datos personales de un estudiante por su número de identificación
+          td GET
           td json
